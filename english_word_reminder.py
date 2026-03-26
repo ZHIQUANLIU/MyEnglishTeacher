@@ -175,7 +175,7 @@ class EnglishWordApp:
 4. 返回有效的JSON数组"""
 
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-2.5-flash-lite',
                 contents=prompt
             )
             text = response.text.strip()
