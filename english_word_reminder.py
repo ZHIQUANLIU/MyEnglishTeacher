@@ -6,6 +6,7 @@ import time
 import json
 import os
 import sys
+import logging
 from datetime import datetime
 import pystray
 from PIL import Image, ImageDraw
@@ -18,6 +19,17 @@ else:
 
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 WORDS_FILE = os.path.join(BASE_DIR, "words_cache.json")
+LOG_FILE = os.path.join(BASE_DIR, "app.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 API_PROVIDERS = [
     "Google Gemini",
@@ -251,7 +263,7 @@ class EnglishWordApp:
             return words
             
         except Exception as e:
-            print(f"API Error: {e}")
+            logger.error(f"API Error: {e}")
             return None
 
     def fetch_from_copilot(self):
@@ -303,11 +315,11 @@ class EnglishWordApp:
                 words = json.loads(text.strip())
                 return words
             else:
-                print(f"Copilot API Error: {response.status_code}")
+                logger.error(f"Copilot API Error: {response.status_code}")
                 return None
                 
         except Exception as e:
-            print(f"API Error: {e}")
+            logger.error(f"API Error: {e}")
             return None
 
     def fetch_from_chatgpt(self):
@@ -359,11 +371,11 @@ class EnglishWordApp:
                 words = json.loads(text.strip())
                 return words
             else:
-                print(f"ChatGPT API Error: {response.status_code}")
+                logger.error(f"ChatGPT API Error: {response.status_code}")
                 return None
                 
         except Exception as e:
-            print(f"API Error: {e}")
+            logger.error(f"API Error: {e}")
             return None
 
     def fetch_from_minimax(self):
@@ -419,11 +431,11 @@ class EnglishWordApp:
                 words = json.loads(text.strip())
                 return words
             else:
-                print(f"MiniMax API Error: {response.status_code}")
+                logger.error(f"MiniMax API Error: {response.status_code}")
                 return None
                 
         except Exception as e:
-            print(f"API Error: {e}")
+            logger.error(f"API Error: {e}")
             return None
 
     def fetch_from_deepseek(self):
@@ -488,11 +500,11 @@ class EnglishWordApp:
                 words = json.loads(text.strip())
                 return words
             else:
-                print(f"Ollama API Error: {response.status_code}")
+                logger.error(f"Ollama API Error: {response.status_code}")
                 return None
                 
         except Exception as e:
-            print(f"API Error: {e}")
+            logger.error(f"API Error: {e}")
             return None
 
     def _fetch_generic(self, name, default_endpoint, default_model):
@@ -563,11 +575,11 @@ class EnglishWordApp:
                 words = json.loads(text.strip())
                 return words
             else:
-                print(f"{name} API Error: {response.status_code}")
+                logger.error(f"{name} API Error: {response.status_code}")
                 return None
                 
         except Exception as e:
-            print(f"API Error: {e}")
+            logger.error(f"API Error: {e}")
             return None
             
     def display_words(self, words):
@@ -734,6 +746,7 @@ class EnglishWordApp:
         threading.Thread(target=timer_loop, daemon=True).start()
         
     def run(self):
+        logger.info("Application started")
         self.root.mainloop()
 
 if __name__ == "__main__":
