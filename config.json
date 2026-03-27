@@ -1,4 +1,9 @@
 {
+<<<<<<< HEAD
   "api_key": "Your Gemini API Key",
   "difficulty": "雅思词汇"
 }
+=======
+  "api_key": "Your Key"
+}
+>>>>>>> 6cd430aad7d71e5b24fb7d28328f7e905a341368
