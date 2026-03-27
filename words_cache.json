@@ -1,62 +1,62 @@
 [
   {
-    "word": "How's it going?",
-    "definition": "你好吗？/ 最近怎么样？",
-    "example": "Hey John, how's it going? Haven't seen you in a while.",
-    "translation": "嘿，约翰，最近怎么样？好久不见了。"
+    "word": "ubiquitous",
+    "definition": "无处不在的，普遍存在的",
+    "example": "Smartphones have become ubiquitous in modern society.",
+    "translation": "智能手机在现代社会已经变得无处不在。"
   },
   {
-    "word": "Could you please...",
-    "definition": "请问您能……？（礼貌的请求）",
-    "example": "Could you please send me the report by end of day?",
-    "translation": "请问您能在我下班前把报告发给我吗？"
+    "word": "ephemeral",
+    "definition": "短暂的，转瞬即逝的",
+    "example": "The beauty of a sunset is ephemeral, lasting only a few minutes.",
+    "translation": "日落的美丽是短暂的，只持续几分钟。"
   },
   {
-    "word": "On the same page",
-    "definition": "在同一页上，意思一致",
-    "example": "Let's have a quick meeting to make sure we're all on the same page for the project.",
-    "translation": "我们开个简短的会议，确保我们对这个项目都有相同的理解。"
+    "word": "nostalgia",
+    "definition": "怀旧，思乡之情",
+    "example": "Listening to old songs often evokes a sense of nostalgia for my childhood.",
+    "translation": "听老歌常常会引起我对童年时光的怀旧之情。"
   },
   {
-    "word": "What's up?",
-    "definition": "有什么事？/ 怎么了？（比较随意的问候）",
-    "example": "Hey, what's up? Anything new happening?",
-    "translation": "嘿，有什么事？有什么新鲜事吗？"
+    "word": "resilient",
+    "definition": "有弹性的，能迅速恢复的",
+    "example": "Children are often more resilient than adults to stress and adversity.",
+    "translation": "孩子们在面对压力和逆境时，通常比成年人更有韧性。"
   },
   {
-    "word": "Take care",
-    "definition": "保重，小心",
-    "example": "It was nice talking to you. Take care!",
-    "translation": "很高兴和你聊天。保重！"
+    "word": "pervasive",
+    "definition": "普遍存在的，弥漫的",
+    "example": "The smell of fresh coffee was pervasive throughout the cafe.",
+    "translation": "咖啡的香味弥漫在整个咖啡馆。"
   },
   {
-    "word": "Reach out",
-    "definition": "联系，接触",
-    "example": "If you have any questions, don't hesitate to reach out to me.",
-    "translation": "如果您有任何问题，请随时与我联系。"
+    "word": "discrepancy",
+    "definition": "差异，不符",
+    "example": "There is a significant discrepancy between the reported figures and the actual results.",
+    "translation": "报告的数字和实际结果之间存在显著的差异。"
   },
   {
-    "word": "Sounds good",
-    "definition": "听起来不错，好的",
-    "example": "Let's meet at 3 PM. Sounds good?",
-    "translation": "我们下午三点见面。可以吗？"
+    "word": "profound",
+    "definition": "深刻的，深远的",
+    "example": "His words had a profound impact on my decision-making process.",
+    "translation": "他的话对我的决策过程产生了深远的影响。"
   },
   {
-    "word": "My pleasure",
-    "definition": "不客气，很高兴为您效劳",
-    "example": "Thank you for your help! - My pleasure.",
-    "translation": "谢谢您的帮助！- 不客气。"
+    "word": "mitigate",
+    "definition": "减轻，缓和",
+    "example": "The government is taking steps to mitigate the effects of climate change.",
+    "translation": "政府正在采取措施减轻气候变化的影响。"
   },
   {
-    "word": "To follow up",
-    "definition": "跟进，后续处理",
-    "example": "I'll follow up with the client about their feedback.",
-    "translation": "我会跟进客户关于他们反馈的事情。"
+    "word": "sustain",
+    "definition": "维持，支撑",
+    "example": "It is difficult to sustain a healthy lifestyle in a busy urban environment.",
+    "translation": "在繁忙的城市环境中维持健康的生活方式是困难的。"
   },
   {
-    "word": "No worries",
-    "definition": "没关系，别担心",
-    "example": "Thanks for the heads-up! - No worries.",
-    "translation": "谢谢提醒！- 没关系。"
+    "word": "advocate",
+    "definition": "提倡，支持；倡导者",
+    "example": "She is a strong advocate for environmental protection.",
+    "translation": "她是环境保护的坚定倡导者。"
   }
 ]

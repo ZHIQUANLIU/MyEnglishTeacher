@@ -1,16 +1,36 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
+import tkinter.ttk as ttk
 import threading
 import time
 import json
 import os
+import sys
 from datetime import datetime
 import pystray
 from PIL import Image, ImageDraw
 from google import genai
 
-CONFIG_FILE = "config.json"
-WORDS_FILE = "words_cache.json"
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+WORDS_FILE = os.path.join(BASE_DIR, "words_cache.json")
+
+DIFFICULTY_LEVELS = [
+    "CEFR A1 (入门级)",
+    "CEFR A2 (基础级)", 
+    "CEFR B1 (中级)",
+    "CEFR B2 (中高级)",
+    "CEFR C1 (高级)",
+    "CEFR C2 (精通级)",
+    "雅思词汇",
+    "托福词汇",
+    "托业词汇",
+    "GRE词汇"
+]
 
 DEFAULT_WORDS = [
     {"word": "asynchronous", "definition": "异步的", "example": "We use asynchronous communication for remote teams.", "translation": "我们使用异步沟通来配合远程团队。"},
@@ -44,7 +64,7 @@ class EnglishWordApp:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 self.config = json.load(f)
         else:
-            self.config = {"api_key": ""}
+            self.config = {"api_key": "", "difficulty": "CEFR B1 (中级)"}
             
     def save_config(self):
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -159,17 +179,18 @@ class EnglishWordApp:
             
         try:
             client = genai.Client(api_key=self.config["api_key"])
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
             
-            prompt = """请提供10个实用的英语单词或短语，包括日常用语和工作常用语。
-            
+            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+
 请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
 [
-  {"word": "单词或短语", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"},
+  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
   ...
 ]
 
 要求：
-1. 单词要实用，涵盖日常生活和工作场景
+1. 单词必须符合{difficulty}难度级别
 2. 例句要自然、地道
 3. 中文解释要准确、简洁
 4. 返回有效的JSON数组"""
@@ -250,22 +271,35 @@ class EnglishWordApp:
     def show_settings(self):
         settings_window = tk.Toplevel()
         settings_window.title("设置")
-        settings_window.geometry("400x150")
+        settings_window.geometry("400x220")
         settings_window.resizable(False, False)
         
-        tk.Label(settings_window, text="Gemini API Key:", font=("Microsoft YaHei", 11)).pack(pady=10)
+        tk.Label(settings_window, text="Gemini API Key:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
         
         api_key_var = tk.StringVar(value=self.config.get("api_key", ""))
         api_key_entry = tk.Entry(settings_window, textvariable=api_key_var, width=50, font=("Microsoft YaHei", 10))
         api_key_entry.pack(pady=5)
         
-        def save_api_key():
+        tk.Label(settings_window, text="单词难度:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        
+        difficulty_var = tk.StringVar(value=self.config.get("difficulty", "CEFR B1 (中级)"))
+        difficulty_combo = tk.ttk.Combobox(
+            settings_window, 
+            textvariable=difficulty_var,
+            values=DIFFICULTY_LEVELS,
+            width=30,
+            state="readonly"
+        )
+        difficulty_combo.pack(pady=5)
+        
+        def save_settings():
             self.config["api_key"] = api_key_var.get().strip()
+            self.config["difficulty"] = difficulty_var.get()
             self.save_config()
-            messagebox.showinfo("成功", "API Key已保存！")
+            messagebox.showinfo("成功", "设置已保存！")
             settings_window.destroy()
             
-        tk.Button(settings_window, text="保存", command=save_api_key, bg='#4A90D9', fg='white', padx=20).pack(pady=10)
+        tk.Button(settings_window, text="保存", command=save_settings, bg='#4A90D9', fg='white', padx=20).pack(pady=15)
         
     def exit_app(self):
         self.tray.stop()
