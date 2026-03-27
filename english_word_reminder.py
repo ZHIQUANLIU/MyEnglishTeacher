@@ -19,6 +19,8 @@ else:
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 WORDS_FILE = os.path.join(BASE_DIR, "words_cache.json")
 
+API_PROVIDERS = ["Google Gemini", "MS Copilot"]
+
 DIFFICULTY_LEVELS = [
     "CEFR A1 (入门级)",
     "CEFR A2 (基础级)", 
@@ -64,7 +66,7 @@ class EnglishWordApp:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 self.config = json.load(f)
         else:
-            self.config = {"api_key": "", "difficulty": "CEFR B1 (中级)"}
+            self.config = {"api_provider": "Google Gemini", "api_key": "", "difficulty": "CEFR B1 (中级)"}
             
     def save_config(self):
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -173,7 +175,14 @@ class EnglishWordApp:
         )
         refresh_btn.pack(side='left', padx=20)
         
-    def fetch_words_from_gemini(self):
+    def fetch_words(self):
+        provider = self.config.get("api_provider", "Google Gemini")
+        if provider == "MS Copilot":
+            return self.fetch_from_copilot()
+        else:
+            return self.fetch_from_gemini()
+
+    def fetch_from_gemini(self):
         if not self.config.get("api_key"):
             return None
             
@@ -214,6 +223,62 @@ class EnglishWordApp:
         except Exception as e:
             print(f"API Error: {e}")
             return None
+
+    def fetch_from_copilot(self):
+        try:
+            import requests
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
+            
+            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+
+请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
+[
+  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
+  ...
+]
+
+要求：
+1. 单词必须符合{difficulty}难度级别
+2. 例句要自然、地道
+3. 中文解释要准确、简洁
+4. 返回有效的JSON数组"""
+
+            endpoint = self.config.get("copilot_endpoint", "")
+            if not endpoint:
+                return None
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.config.get('api_key', '')}"
+            }
+            
+            payload = {
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 2000
+            }
+            
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                text = text.strip()
+                
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                    
+                words = json.loads(text.strip())
+                return words
+            else:
+                print(f"Copilot API Error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"API Error: {e}")
+            return None
             
     def display_words(self, words):
         self.word_text.delete('1.0', 'end')
@@ -238,7 +303,7 @@ class EnglishWordApp:
         self.time_label.config(text=f"更新时间: {now}")
         
     def fetch_and_display_words(self):
-        words = self.fetch_words_from_gemini()
+        words = self.fetch_words()
         
         if words:
             self.save_cached_words(words)
@@ -246,7 +311,7 @@ class EnglishWordApp:
         else:
             self.display_words(self.cached_words)
             if not self.config.get("api_key"):
-                messagebox.showwarning("提示", "请先设置Gemini API Key以获取新单词！")
+                messagebox.showwarning("提示", "请先设置API Key！")
                 
     def show_words(self):
         self.fetch_and_display_words()
@@ -271,19 +336,37 @@ class EnglishWordApp:
     def show_settings(self):
         settings_window = tk.Toplevel()
         settings_window.title("设置")
-        settings_window.geometry("400x220")
+        settings_window.geometry("450x320")
         settings_window.resizable(False, False)
         
-        tk.Label(settings_window, text="Gemini API Key:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        tk.Label(settings_window, text="API Provider:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        
+        provider_var = tk.StringVar(value=self.config.get("api_provider", "Google Gemini"))
+        provider_combo = ttk.Combobox(
+            settings_window, 
+            textvariable=provider_var,
+            values=API_PROVIDERS,
+            width=25,
+            state="readonly"
+        )
+        provider_combo.pack(pady=5)
+        
+        tk.Label(settings_window, text="API Key:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
         
         api_key_var = tk.StringVar(value=self.config.get("api_key", ""))
         api_key_entry = tk.Entry(settings_window, textvariable=api_key_var, width=50, font=("Microsoft YaHei", 10))
         api_key_entry.pack(pady=5)
         
+        tk.Label(settings_window, text="Copilot Endpoint:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        
+        endpoint_var = tk.StringVar(value=self.config.get("copilot_endpoint", ""))
+        endpoint_entry = tk.Entry(settings_window, textvariable=endpoint_var, width=50, font=("Microsoft YaHei", 10))
+        endpoint_entry.pack(pady=5)
+        
         tk.Label(settings_window, text="单词难度:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
         
         difficulty_var = tk.StringVar(value=self.config.get("difficulty", "CEFR B1 (中级)"))
-        difficulty_combo = tk.ttk.Combobox(
+        difficulty_combo = ttk.Combobox(
             settings_window, 
             textvariable=difficulty_var,
             values=DIFFICULTY_LEVELS,
@@ -292,8 +375,19 @@ class EnglishWordApp:
         )
         difficulty_combo.pack(pady=5)
         
+        def on_provider_change(*args):
+            provider = provider_var.get()
+            if provider == "MS Copilot":
+                api_key_entry.config(show="*")
+            else:
+                api_key_entry.config(show="")
+                
+        provider_var.trace("w", on_provider_change)
+        
         def save_settings():
+            self.config["api_provider"] = provider_var.get()
             self.config["api_key"] = api_key_var.get().strip()
+            self.config["copilot_endpoint"] = endpoint_var.get().strip()
             self.config["difficulty"] = difficulty_var.get()
             self.save_config()
             messagebox.showinfo("成功", "设置已保存！")
