@@ -19,7 +19,19 @@ else:
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 WORDS_FILE = os.path.join(BASE_DIR, "words_cache.json")
 
-API_PROVIDERS = ["Google Gemini", "MS Copilot"]
+API_PROVIDERS = [
+    "Google Gemini",
+    "MS Copilot",
+    "ChatGPT",
+    "MiniMax",
+    "DeepSeek",
+    "Qwen",
+    "Groq",
+    "Mistral",
+    "Claude",
+    "Cohere",
+    "Ollama"
+]
 
 DIFFICULTY_LEVELS = [
     "CEFR A1 (入门级)",
@@ -179,6 +191,24 @@ class EnglishWordApp:
         provider = self.config.get("api_provider", "Google Gemini")
         if provider == "MS Copilot":
             return self.fetch_from_copilot()
+        elif provider == "ChatGPT":
+            return self.fetch_from_chatgpt()
+        elif provider == "MiniMax":
+            return self.fetch_from_minimax()
+        elif provider == "DeepSeek":
+            return self.fetch_from_deepseek()
+        elif provider == "Qwen":
+            return self.fetch_from_qwen()
+        elif provider == "Groq":
+            return self.fetch_from_groq()
+        elif provider == "Mistral":
+            return self.fetch_from_mistral()
+        elif provider == "Claude":
+            return self.fetch_from_claude()
+        elif provider == "Cohere":
+            return self.fetch_from_cohere()
+        elif provider == "Ollama":
+            return self.fetch_from_ollama()
         else:
             return self.fetch_from_gemini()
 
@@ -279,6 +309,266 @@ class EnglishWordApp:
         except Exception as e:
             print(f"API Error: {e}")
             return None
+
+    def fetch_from_chatgpt(self):
+        try:
+            import requests
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
+            
+            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+
+请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
+[
+  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
+  ...
+]
+
+要求：
+1. 单词必须符合{difficulty}难度级别
+2. 例句要自然、地道
+3. 中文解释要准确、简洁
+4. 返回有效的JSON数组"""
+
+            endpoint = self.config.get("chatgpt_endpoint", "https://api.openai.com/v1/chat/completions")
+            api_key = self.config.get("api_key", "")
+            
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
+            
+            payload = {
+                "model": "gpt-3.5-turbo",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 2000
+            }
+            
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                text = text.strip()
+                
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                    
+                words = json.loads(text.strip())
+                return words
+            else:
+                print(f"ChatGPT API Error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"API Error: {e}")
+            return None
+
+    def fetch_from_minimax(self):
+        try:
+            import requests
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
+            
+            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+
+请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
+[
+  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
+  ...
+]
+
+要求：
+1. 单词必须符合{difficulty}难度级别
+2. 例句要自然、地道
+3. 中文解释要准确、简洁
+4. 返回有效的JSON数组"""
+
+            endpoint = self.config.get("minimax_endpoint", "")
+            api_key = self.config.get("api_key", "")
+            model = self.config.get("minimax_model", "abab6.5s-chat")
+            
+            if not endpoint:
+                return None
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
+            
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 2000
+            }
+            
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                text = text.strip()
+                
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                    
+                words = json.loads(text.strip())
+                return words
+            else:
+                print(f"MiniMax API Error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"API Error: {e}")
+            return None
+
+    def fetch_from_deepseek(self):
+        return self._fetch_generic("DeepSeek", "https://api.deepseek.com/v1/chat/completions", "deepseek-chat")
+
+    def fetch_from_qwen(self):
+        return self._fetch_generic("Qwen", None, "qwen-turbo")
+
+    def fetch_from_groq(self):
+        return self._fetch_generic("Groq", "https://api.groq.com/openai/v1/chat/completions", "mixtral-8x7b-32768")
+
+    def fetch_from_mistral(self):
+        return self._fetch_generic("Mistral", "https://api.mistral.ai/v1/chat/completions", "mistral-small")
+
+    def fetch_from_claude(self):
+        return self._fetch_generic("Claude", "https://api.anthropic.com/v1/messages", "claude-3-haiku-20240307")
+
+    def fetch_from_cohere(self):
+        return self._fetch_generic("Cohere", "https://api.cohere.ai/v1/chat", "command-r")
+
+    def fetch_from_ollama(self):
+        try:
+            import requests
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
+            
+            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+
+请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
+[
+  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
+  ...
+]
+
+要求：
+1. 单词必须符合{difficulty}难度级别
+2. 例句要自然、地道
+3. 中文解释要准确、简洁
+4. 返回有效的JSON数组"""
+
+            endpoint = self.config.get("ollama_endpoint", "http://localhost:11434/api/chat")
+            model = self.config.get("ollama_model", "llama3")
+            
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False
+            }
+            
+            response = requests.post(endpoint, json=payload, timeout=60)
+            if response.status_code == 200:
+                result = response.json()
+                text = result.get("message", {}).get("content", "")
+                text = text.strip()
+                
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                    
+                words = json.loads(text.strip())
+                return words
+            else:
+                print(f"Ollama API Error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"API Error: {e}")
+            return None
+
+    def _fetch_generic(self, name, default_endpoint, default_model):
+        try:
+            import requests
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
+            
+            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+
+请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
+[
+  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
+  ...
+]
+
+要求：
+1. 单词必须符合{difficulty}难度级别
+2. 例句要自然、地道
+3. 中文解释要准确、简洁
+4. 返回有效的JSON数组"""
+
+            endpoint = self.config.get(f"{name.lower()}_endpoint", default_endpoint)
+            api_key = self.config.get("api_key", "")
+            model = self.config.get(f"{name.lower()}_model", default_model)
+            
+            if not endpoint:
+                return None
+
+            headers = {
+                "Content-Type": "application/json"
+            }
+            if api_key:
+                if name == "Claude":
+                    headers["x-api-key"] = api_key
+                    headers["anthropic-version"] = "2023-06-01"
+                else:
+                    headers["Authorization"] = f"Bearer {api_key}"
+            
+            if name == "Claude":
+                payload = {
+                    "model": model,
+                    "max_tokens": 2000,
+                    "messages": [{"role": "user", "content": prompt}]
+                }
+            else:
+                payload = {
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 2000
+                }
+            
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                if name == "Claude":
+                    text = result.get("content", [{}])[0].get("text", "")
+                else:
+                    text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                text = text.strip()
+                
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                    
+                words = json.loads(text.strip())
+                return words
+            else:
+                print(f"{name} API Error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"API Error: {e}")
+            return None
             
     def display_words(self, words):
         self.word_text.delete('1.0', 'end')
@@ -336,64 +626,100 @@ class EnglishWordApp:
     def show_settings(self):
         settings_window = tk.Toplevel()
         settings_window.title("设置")
-        settings_window.geometry("450x320")
+        settings_window.geometry("500x500")
         settings_window.resizable(False, False)
         
-        tk.Label(settings_window, text="API Provider:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        main_frame = tk.Frame(settings_window)
+        main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        tk.Label(main_frame, text="API Provider:", font=("Microsoft YaHei", 11)).grid(row=0, column=0, sticky='w', pady=5)
         
         provider_var = tk.StringVar(value=self.config.get("api_provider", "Google Gemini"))
         provider_combo = ttk.Combobox(
-            settings_window, 
+            main_frame, 
             textvariable=provider_var,
             values=API_PROVIDERS,
             width=25,
             state="readonly"
         )
-        provider_combo.pack(pady=5)
+        provider_combo.grid(row=0, column=1, pady=5)
         
-        tk.Label(settings_window, text="API Key:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        tk.Label(main_frame, text="API Key:", font=("Microsoft YaHei", 11)).grid(row=1, column=0, sticky='w', pady=5)
         
         api_key_var = tk.StringVar(value=self.config.get("api_key", ""))
-        api_key_entry = tk.Entry(settings_window, textvariable=api_key_var, width=50, font=("Microsoft YaHei", 10))
-        api_key_entry.pack(pady=5)
+        api_key_entry = tk.Entry(main_frame, textvariable=api_key_var, width=40, font=("Microsoft YaHei", 10))
+        api_key_entry.grid(row=1, column=1, pady=5)
         
-        tk.Label(settings_window, text="Copilot Endpoint:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        tk.Label(main_frame, text="Endpoint:", font=("Microsoft YaHei", 11)).grid(row=2, column=0, sticky='w', pady=5)
         
         endpoint_var = tk.StringVar(value=self.config.get("copilot_endpoint", ""))
-        endpoint_entry = tk.Entry(settings_window, textvariable=endpoint_var, width=50, font=("Microsoft YaHei", 10))
-        endpoint_entry.pack(pady=5)
+        endpoint_entry = tk.Entry(main_frame, textvariable=endpoint_var, width=40, font=("Microsoft YaHei", 10))
+        endpoint_entry.grid(row=2, column=1, pady=5)
         
-        tk.Label(settings_window, text="单词难度:", font=("Microsoft YaHei", 11)).pack(pady=(15, 5))
+        tk.Label(main_frame, text="Model:", font=("Microsoft YaHei", 11)).grid(row=3, column=0, sticky='w', pady=5)
+        
+        model_var = tk.StringVar(value=self.config.get("minimax_model", ""))
+        model_entry = tk.Entry(main_frame, textvariable=model_var, width=40, font=("Microsoft YaHei", 10))
+        model_entry.grid(row=3, column=1, pady=5)
+        
+        tk.Label(main_frame, text="Ollama Model:", font=("Microsoft YaHei", 11)).grid(row=4, column=0, sticky='w', pady=5)
+        
+        ollama_model_var = tk.StringVar(value=self.config.get("ollama_model", "llama3"))
+        ollama_model_entry = tk.Entry(main_frame, textvariable=ollama_model_var, width=40, font=("Microsoft YaHei", 10))
+        ollama_model_entry.grid(row=4, column=1, pady=5)
+        
+        tk.Label(main_frame, text="单词难度:", font=("Microsoft YaHei", 11)).grid(row=5, column=0, sticky='w', pady=5)
         
         difficulty_var = tk.StringVar(value=self.config.get("difficulty", "CEFR B1 (中级)"))
         difficulty_combo = ttk.Combobox(
-            settings_window, 
+            main_frame, 
             textvariable=difficulty_var,
             values=DIFFICULTY_LEVELS,
-            width=30,
+            width=27,
             state="readonly"
         )
-        difficulty_combo.pack(pady=5)
+        difficulty_combo.grid(row=5, column=1, pady=5)
         
         def on_provider_change(*args):
             provider = provider_var.get()
-            if provider == "MS Copilot":
+            if provider in ["MS Copilot", "ChatGPT", "MiniMax", "DeepSeek", "Groq", "Mistral", "Claude", "Cohere"]:
                 api_key_entry.config(show="*")
+            elif provider == "Ollama":
+                api_key_entry.config(show="")
+                endpoint_var.set("http://localhost:11434/api/chat")
             else:
                 api_key_entry.config(show="")
                 
         provider_var.trace("w", on_provider_change)
         
         def save_settings():
-            self.config["api_provider"] = provider_var.get()
+            provider = provider_var.get()
+            self.config["api_provider"] = provider
             self.config["api_key"] = api_key_var.get().strip()
             self.config["copilot_endpoint"] = endpoint_var.get().strip()
+            self.config["chatgpt_endpoint"] = endpoint_var.get().strip()
+            self.config["minimax_endpoint"] = endpoint_var.get().strip()
+            self.config["minimax_model"] = model_var.get().strip()
+            self.config["deepseek_endpoint"] = endpoint_var.get().strip()
+            self.config["deepseek_model"] = model_var.get().strip()
+            self.config["qwen_endpoint"] = endpoint_var.get().strip()
+            self.config["qwen_model"] = model_var.get().strip()
+            self.config["groq_endpoint"] = endpoint_var.get().strip()
+            self.config["groq_model"] = model_var.get().strip()
+            self.config["mistral_endpoint"] = endpoint_var.get().strip()
+            self.config["mistral_model"] = model_var.get().strip()
+            self.config["claude_endpoint"] = endpoint_var.get().strip()
+            self.config["claude_model"] = model_var.get().strip()
+            self.config["cohere_endpoint"] = endpoint_var.get().strip()
+            self.config["cohere_model"] = model_var.get().strip()
+            self.config["ollama_endpoint"] = endpoint_var.get().strip()
+            self.config["ollama_model"] = ollama_model_var.get().strip()
             self.config["difficulty"] = difficulty_var.get()
             self.save_config()
             messagebox.showinfo("成功", "设置已保存！")
             settings_window.destroy()
             
-        tk.Button(settings_window, text="保存", command=save_settings, bg='#4A90D9', fg='white', padx=20).pack(pady=15)
+        tk.Button(main_frame, text="保存", command=save_settings, bg='#4A90D9', fg='white', padx=20).grid(row=6, column=0, columnspan=2, pady=15)
         
     def exit_app(self):
         self.tray.stop()
