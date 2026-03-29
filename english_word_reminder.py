@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import logging
+import random
 from datetime import datetime
 import pystray
 from PIL import Image, ImageDraw
@@ -19,6 +20,7 @@ else:
 
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 WORDS_FILE = os.path.join(BASE_DIR, "words_cache.json")
+USED_WORDS_FILE = os.path.join(BASE_DIR, "used_words.json")
 LOG_FILE = os.path.join(BASE_DIR, "app.log")
 
 logging.basicConfig(
@@ -78,6 +80,7 @@ class EnglishWordApp:
         
         self.load_config()
         self.load_cached_words()
+        self.load_used_words()
         
         self.setup_tray()
         self.create_word_window()
@@ -103,10 +106,41 @@ class EnglishWordApp:
         else:
             self.cached_words = DEFAULT_WORDS.copy()
             
+    MAX_USED_WORDS = 500
+    
     def save_cached_words(self, words):
         self.cached_words = words
         with open(WORDS_FILE, "w", encoding="utf-8") as f:
             json.dump(words, f, ensure_ascii=False, indent=2)
+        
+        self.used_words = self.used_words or []
+        for w in words:
+            word = w.get("word", "").lower()
+            if word not in self.used_words:
+                self.used_words.append(word)
+        
+        if len(self.used_words) > self.MAX_USED_WORDS:
+            self.used_words = self.used_words[-self.MAX_USED_WORDS:]
+            
+        with open(USED_WORDS_FILE, "w", encoding="utf-8") as f:
+            json.dump(self.used_words, f, ensure_ascii=False, indent=2)
+            
+    def load_used_words(self):
+        if os.path.exists(USED_WORDS_FILE):
+            with open(USED_WORDS_FILE, "r", encoding="utf-8") as f:
+                self.used_words = json.load(f)
+        else:
+            self.used_words = []
+            
+    def clear_used_words(self):
+        self.used_words = []
+        if os.path.exists(USED_WORDS_FILE):
+            os.remove(USED_WORDS_FILE)
+    
+    def get_used_words_str(self):
+        if not self.used_words:
+            return ""
+        return "，".join(self.used_words[-30:])
             
     def create_tray_icon(self):
         width = 64
@@ -200,6 +234,7 @@ class EnglishWordApp:
         refresh_btn.pack(side='left', padx=20)
         
     def fetch_words(self):
+        self.used_words = getattr(self, 'used_words', [])
         provider = self.config.get("api_provider", "Google Gemini")
         if provider == "MS Copilot":
             return self.fetch_from_copilot()
@@ -224,15 +259,14 @@ class EnglishWordApp:
         else:
             return self.fetch_from_gemini()
 
-    def fetch_from_gemini(self):
-        if not self.config.get("api_key"):
-            return None
-            
-        try:
-            client = genai.Client(api_key=self.config["api_key"])
-            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
-            
-            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
+    def build_prompt(self, difficulty):
+        seed = random.randint(1000, 9999)
+        used_str = ""
+        if self.used_words:
+            used_words_list = ", ".join([f'"{w}"' for w in self.used_words[-50:]])
+            used_str = f"\n已使用过的单词（请勿重复）: [{used_words_list}]"
+        
+        prompt = f"""请提供10个{difficulty}级别的英语单词。{used_str}
 
 请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
 [
@@ -242,9 +276,21 @@ class EnglishWordApp:
 
 要求：
 1. 单词必须符合{difficulty}难度级别
-2. 例句要自然、地道
-3. 中文解释要准确、简洁
-4. 返回有效的JSON数组"""
+2. 必须提供全新的单词，不要使用上面已列出的已使用过的单词
+3. 例句要自然、地道
+4. 中文解释要准确、简洁
+5. 返回有效的JSON数组
+6. 随机种子: {seed}"""
+        return prompt
+
+    def fetch_from_gemini(self):
+        if not self.config.get("api_key"):
+            return None
+            
+        try:
+            client = genai.Client(api_key=self.config["api_key"])
+            difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
+            prompt = self.build_prompt(difficulty)
 
             response = client.models.generate_content(
                 model='gemini-2.5-flash-lite',
@@ -270,20 +316,7 @@ class EnglishWordApp:
         try:
             import requests
             difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
-            
-            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
-
-请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
-[
-  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
-  ...
-]
-
-要求：
-1. 单词必须符合{difficulty}难度级别
-2. 例句要自然、地道
-3. 中文解释要准确、简洁
-4. 返回有效的JSON数组"""
+            prompt = self.build_prompt(difficulty)
 
             endpoint = self.config.get("copilot_endpoint", "")
             if not endpoint:
@@ -326,20 +359,7 @@ class EnglishWordApp:
         try:
             import requests
             difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
-            
-            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
-
-请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
-[
-  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
-  ...
-]
-
-要求：
-1. 单词必须符合{difficulty}难度级别
-2. 例句要自然、地道
-3. 中文解释要准确、简洁
-4. 返回有效的JSON数组"""
+            prompt = self.build_prompt(difficulty)
 
             endpoint = self.config.get("chatgpt_endpoint", "https://api.openai.com/v1/chat/completions")
             api_key = self.config.get("api_key", "")
@@ -382,20 +402,7 @@ class EnglishWordApp:
         try:
             import requests
             difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
-            
-            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
-
-请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
-[
-  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
-  ...
-]
-
-要求：
-1. 单词必须符合{difficulty}难度级别
-2. 例句要自然、地道
-3. 中文解释要准确、简洁
-4. 返回有效的JSON数组"""
+            prompt = self.build_prompt(difficulty)
 
             endpoint = self.config.get("minimax_endpoint", "")
             api_key = self.config.get("api_key", "")
@@ -460,20 +467,7 @@ class EnglishWordApp:
         try:
             import requests
             difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
-            
-            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
-
-请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
-[
-  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
-  ...
-]
-
-要求：
-1. 单词必须符合{difficulty}难度级别
-2. 例句要自然、地道
-3. 中文解释要准确、简洁
-4. 返回有效的JSON数组"""
+            prompt = self.build_prompt(difficulty)
 
             endpoint = self.config.get("ollama_endpoint", "http://localhost:11434/api/chat")
             model = self.config.get("ollama_model", "llama3")
@@ -511,20 +505,7 @@ class EnglishWordApp:
         try:
             import requests
             difficulty = self.config.get("difficulty", "CEFR B1 (中级)")
-            
-            prompt = f"""请提供10个{difficulty}级别的英语单词。请确保单词符合该难度等级。
-
-请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
-[
-  {{"word": "单词", "definition": "中文解释", "example": "英文例句", "translation": "例句中文翻译"}},
-  ...
-]
-
-要求：
-1. 单词必须符合{difficulty}难度级别
-2. 例句要自然、地道
-3. 中文解释要准确、简洁
-4. 返回有效的JSON数组"""
+            prompt = self.build_prompt(difficulty)
 
             endpoint = self.config.get(f"{name.lower()}_endpoint", default_endpoint)
             api_key = self.config.get("api_key", "")
@@ -732,6 +713,12 @@ class EnglishWordApp:
             settings_window.destroy()
             
         tk.Button(main_frame, text="保存", command=save_settings, bg='#4A90D9', fg='white', padx=20).grid(row=6, column=0, columnspan=2, pady=15)
+        
+        def clear_history():
+            self.clear_used_words()
+            messagebox.showinfo("成功", "历史记录已清除！")
+            
+        tk.Button(main_frame, text="清除单词历史", command=clear_history, bg='#FF6B6B', fg='white', padx=15).grid(row=7, column=0, columnspan=2, pady=5)
         
     def exit_app(self):
         self.tray.stop()
