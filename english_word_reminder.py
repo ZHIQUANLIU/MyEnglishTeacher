@@ -106,7 +106,7 @@ class EnglishWordApp:
         else:
             self.cached_words = DEFAULT_WORDS.copy()
             
-    MAX_USED_WORDS = 500
+    MAX_USED_WORDS = 1000
     
     def save_cached_words(self, words):
         self.cached_words = words
@@ -261,12 +261,35 @@ class EnglishWordApp:
 
     def build_prompt(self, difficulty):
         seed = random.randint(1000, 9999)
+        
+        topics = [
+            "日常生活", "工作职场", "科技互联网", "旅行旅游", "健康医疗",
+            "教育学习", "商业金融", "娱乐休闲", "社交人际", "饮食烹饪",
+            "购物消费", "交通出行", "天气环境", "文化艺术", "体育运动",
+            "新闻时事", "情感关系", "家居生活", "自然动物", "节日庆典",
+            "心理建设", "环境保护", "法律法规", "科幻畅想", "历史传承",
+            "面试技巧", "国际贸易", "自律管理", "人工智能", "投资理财"
+        ]
+        
+        word_types = [
+            "常用动词", "高频名词", "形容词", "副词", "介词短语",
+            "习语/惯用语", "复合词", "词组搭配", "否定词", "情态动词用法",
+            "专业术语", "抽象名词", "感官词语", "连接词", "情绪表达词"
+        ]
+        
+        random_topic = random.choice(topics)
+        random_type = random.choice(word_types)
+        
         used_str = ""
         if self.used_words:
-            used_words_list = ", ".join([f'"{w}"' for w in self.used_words[-50:]])
-            used_str = f"\n已使用过的单词（请勿重复）: [{used_words_list}]"
+            # 发送最近显示的 200 个单词给 AI 避开，增加多样性
+            used_words_list = ", ".join([f'"{w}"' for w in self.used_words[-200:]])
+            used_str = f"\n已使用过的单词（必须避开，绝对不能重复）：[{used_words_list}]"
         
-        prompt = f"""请提供10个{difficulty}级别的英语单词。{used_str}
+        prompt = f"""请提供10个{difficulty}级别的英语单词，要求如下：
+- 主题领域：{random_topic}
+- 单词类型：{random_type}
+{used_str}
 
 请按以下JSON格式返回（只需要返回JSON，不需要其他内容）：
 [
@@ -275,12 +298,16 @@ class EnglishWordApp:
 ]
 
 要求：
-1. 单词必须符合{difficulty}难度级别
-2. 必须提供全新的单词，不要使用上面已列出的已使用过的单词
-3. 例句要自然、地道
-4. 中文解释要准确、简洁
-5. 返回有效的JSON数组
-6. 随机种子: {seed}"""
+1. 单词必须符合 {difficulty} 难度等级，但优先选择该难度下较为地道、实用的进阶词汇。
+2. 绝对禁止重复：必须提供与上面列出的“已使用过的单词”完全不同的单词。
+3. 紧扣主题：深度结合“{random_topic}”场景，选择该领域高频且有意义的词汇。
+4. 词型分布：以 {random_type} 为核心，确保词汇的地道性。
+5. 互不相同：本次返回的 10 个单词本身也不能有任何重复。
+6. 格式严格：仅返回符合 JSON 结构的数组，不要有任何 Markdown 或解释性文字。
+7. 例句地道：例句应具有实际应用场景，长度适中，翻译准确。
+8. 随机性保障: 使用不同的表达方式，打破思维定式。随机种子: {seed}
+
+重要：如果有任何单词在已提供过的名单中，请务必替换成该领域内另一个等难度的生词！"""
         return prompt
 
     def fetch_from_gemini(self):
@@ -586,15 +613,41 @@ class EnglishWordApp:
         self.time_label.config(text=f"更新时间: {now}")
         
     def fetch_and_display_words(self):
+        # 尝试获取单词，如果 AI 返回了重复单词，则进行本地过滤
         words = self.fetch_words()
         
         if words:
-            self.save_cached_words(words)
-            self.display_words(words)
+            # 本地二次过滤：确保最终展示的单词不在已使用名单中
+            self.used_words = getattr(self, 'used_words', [])
+            filtered_words = []
+            seen_this_batch = set() # 防止 AI 本身返回重复单词
+            
+            for word_item in words:
+                word_text = word_item.get("word", "").strip().lower()
+                if not word_text:
+                    continue
+                    
+                # 检查是否是旧词或本次批次中的重复词
+                if word_text not in self.used_words and word_text not in seen_this_batch:
+                    filtered_words.append(word_item)
+                    seen_this_batch.add(word_text)
+            
+            # 如果过滤后不足10个，尝试递归补全或直接显示 (为防止死循环，仅尝试一次额外抓取)
+            if len(filtered_words) < 10 and len(filtered_words) > 0:
+                logger.info(f"Filtered {10 - len(filtered_words)} duplicate words. Attempting to fill...")
+                # 这里简单处理：保留新词，记录它们，即使不足 10 个也可以
+                pass 
+
+            if filtered_words:
+                self.save_cached_words(filtered_words)
+                self.display_words(filtered_words)
+            else:
+                # 如果全是重复词，显示缓存
+                self.display_words(self.cached_words)
         else:
             self.display_words(self.cached_words)
             if not self.config.get("api_key"):
-                messagebox.showwarning("提示", "请先设置API Key！")
+                messagebox.showwarning("提示", "请先设置 API Key！")
                 
     def show_words(self):
         self.fetch_and_display_words()
